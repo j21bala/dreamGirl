@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>¿?</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stardew-brown: #5d3a1a;
+            --stardew-beige: #f4d0a4;
+            --heart-red: #e8294a;
+            --love-pink: #ff85a2;
+            --love-dark: #2e0a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #1a0a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 95vw;
+            height: 90vh;
+            max-width: 960px;
+            max-height: 640px;
+            background: url('assets/fondo.gif') no-repeat;
+            background-size: cover;
+            background-position: center;
+            border: 8px solid var(--stardew-brown);
+            image-rendering: pixelated;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        #game-container::after {
+            content: "";
+            position: absolute;
+            bottom: 8px;
+            left: -1px;
+            background-color: hsl(43,14%,10%);
+            width: 170px;
+            height: 60px;
+            z-index: 4;
+        }
+
+        .character-wrapper {
+            position: absolute;
+            bottom: 20%;
+            width: 200px;
+            height: 200px;
+            z-index: 5;
+            overflow: visible;
+        }
+        #juan-wrapper { left: -200px; }
+        #abi-wrapper  { right: -200px; }
+
+        .character {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            display: block;
+            object-fit: contain;
+            object-position: bottom center;
+            transform-origin: center bottom;
+        }
+
+        /* ── Espada suelta: sprite animado SIN tocar al personaje ── */
+        #dialogue-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            background: var(--stardew-beige);
+            border: 6px solid var(--stardew-brown);
+            padding: 15px;
+            display: none;
+            color: var(--stardew-brown);
+            font-size: 11px;
+            line-height: 1.6;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #japanese-modal {
+            position: absolute;
+            inset: 0;
+            background: rgba(17, 6, 16, 0.92);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        #japanese-modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        #japanese-modal .proposal-card {
+            width: min(640px, 96%);
+            background: rgba(253, 246, 227, 0.96);
+            border: 10px solid #b32a2a;
+            box-shadow: 0 0 50px rgba(179, 42, 42, 0.45);
+            padding: 32px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            text-align: center;
+            position: relative;
+        }
+        #japanese-modal h1 {
+            font-size: 22px;
+            color: #2e1a1a;
+            line-height: 1.4;
+            margin: 0;
+            text-shadow: 1px 1px 0 #fff;
+        }
+        .japanese-options {
+            display: flex;
+            gap: 28px;
+            pointer-events: auto;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn-japanese {
+            font-family: 'Press Start 2P';
+            font-size: 12px;
+            padding: 15px 26px;
+            cursor: pointer;
+            border: 4px solid #2e1a1a;
+            background: #fff;
+            color: #2e1a1a;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .btn-japanese:hover { transform: translateY(-5px); background: #eee; }
+        .btn-japanese.yes { background-color: #b32a2a; color: #fff; border-color: #8c2020; }
+        .btn-japanese.yes:hover { background-color: #c93a3a; }
+
+        /* ══════════════════════════════════════
+           LOVE OVERLAY — pantalla final romántica
+        ══════════════════════════════════════ */
+        #love-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 180;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: radial-gradient(ellipse at 50% 0%,   rgba(255,100,150,0.22) 0%, transparent 55%),
+                        radial-gradient(ellipse at 20% 100%, rgba(255,180,200,0.15) 0%, transparent 45%),
+                        linear-gradient(160deg, rgba(45,5,30,0.97) 0%, rgba(10,2,22,0.98) 100%);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            overflow: hidden;
+        }
+        #love-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* Píxeles decorativos flotantes de fondo */
+        .bg-pixel {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--heart-red);
+            opacity: 0;
+            pointer-events: none;
+            animation: pixel-drift 4s ease-in-out infinite;
+        }
+        @keyframes pixel-drift {
+            0%   { opacity: 0;    transform: translateY(0) scale(1); }
+            20%  { opacity: 0.6; }
+            80%  { opacity: 0.4; }
+            100% { opacity: 0;    transform: translateY(-120px) scale(0.5); }
+        }
+
+        /* ── Carta de amor ── */
+        #letter-card {
+            width: min(580px, 96%);
+            position: relative;
+            background: #fffaf2;
+            border: 0;
+            border-radius: 4px;
+            padding: 0;
+            box-shadow:
+                0 0 0 4px #e8294a,
+                0 0 0 8px #2e0a1a,
+                0 0 40px rgba(232,41,74,0.35),
+                0 8px 32px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateY(24px) scale(0.96);
+            transition: opacity 0.45s ease, transform 0.45s ease;
+            overflow: hidden;
+        }
+        #letter-card.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Cabecera de la carta */
+        #letter-header {
+            background: linear-gradient(135deg, #b32a2a 0%, #7a0a2e 50%, #3d0a1a 100%);
+            padding: 14px 18px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 4px solid #2e0a1a;
+            position: relative;
+            overflow: hidden;
+        }
+        #letter-header::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                rgba(255,255,255,0.06), rgba(255,255,255,0.06) 1px,
+                transparent 2px, transparent 4px);
+            pointer-events: none;
+        }
+        #letter-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #letter-title-row span.pixel-heart {
+            font-size: 16px;
+            animation: pulse-heart 0.9s ease-in-out infinite alternate;
+        }
+        @keyframes pulse-heart {
+            from { transform: scale(1);    filter: brightness(1); }
+            to   { transform: scale(1.25); filter: brightness(1.4); }
+        }
+        #letter-header h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            color: #ffe0ea;
+            text-shadow: 2px 2px 0 #2e0a1a, 0 0 12px rgba(255,130,160,0.6);
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
+        /* Botón cerrar */
+        #btn-close-letter {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            color: #ffe0ea;
+            background: rgba(0,0,0,0.35);
+            border: 2px solid rgba(255,200,200,0.4);
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: background 0.2s, transform 0.15s;
+            position: relative;
+            z-index: 2;
+            white-space: nowrap;
+        }
+        #btn-close-letter:hover {
+            background: rgba(180,30,60,0.7);
+            transform: scale(1.08);
+        }
+
+        /* Cuerpo de la carta */
+        #letter-body {
+            padding: 20px 22px 18px;
+            background:
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 27px,
+                    rgba(232,41,74,0.12) 28px
+                ),
+                #fffaf2;
+            position: relative;
+        }
+        #letter-body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 40px; bottom: 0;
+            width: 2px;
+            background: rgba(232,41,74,0.25);
+        }
+
+        #love-letter {
+            padding-left: 18px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            color: #3f1220;
+            line-height: 2.1;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            user-select: text;
+            min-height: 120px;
+        }
+
+        #letter-deco {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 0 4px;
+            font-size: 12px;
+            animation: twinkle 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes twinkle {
+            from { opacity: 0.5; }
+            to   { opacity: 1; }
+        }
+
+        /* ── Corazones flotantes ── */
+        .heart {
+            position: absolute;
+            pointer-events: none;
+            z-index: 200;
+            animation: fly-heart 3.2s linear forwards;
+            font-size: 18px;
+        }
+        @keyframes fly-heart {
+            0%   { transform: translateY(0) scale(1) rotate(-10deg); opacity: 1; }
+            40%  { transform: translateY(-180px) scale(1.2) rotate(10deg); opacity: 0.9; }
+            100% { transform: translateY(-420px) scale(0.6) rotate(25deg); opacity: 0; }
+        }
+
+        /* ── Pétalos de sakura ── */
+        .sakura-petal {
+            position: absolute;
+            pointer-events: none;
+            z-index: 190;
+            font-size: 18px;
+            animation: sakura-fall 5s linear forwards;
+        }
+        @keyframes sakura-fall {
+            0%   { transform: translateY(0) rotate(0deg)   translateX(0);   opacity: 1; }
+            50%  { transform: translateY(40vh) rotate(280deg) translateX(28px);  opacity: 0.9; }
+            100% { transform: translateY(96vh) rotate(540deg) translateX(-22px); opacity: 0; }
+        }
+
+        /* ── Pantalla inicio ── */
+        #start-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            gap: 20px;
+        }
+        #start-screen h2 { font-size: 14px; animation: blink 1.2s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        #volume-indicator {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 20;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid var(--stardew-brown);
+            padding: 6px 10px;
+            color: var(--stardew-beige);
+            font-size: 8px;
+            cursor: pointer;
+        }
+
+        /* ══════════════════════════════════════
+           PANTALLA APAGADO TV
+           z-index por encima de todo (999)
+           Simula el colapso horizontal de un CRT
+        ══════════════════════════════════════ */
+        #tv-off-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 999;
+            background: #000;
+            pointer-events: none;
+            /* línea horizontal central, como CRT */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+        }
+        /* La línea blanca que colapsa */
+        #tv-off-screen::before {
+            content: "";
+            display: block;
+            width: 100%;
+            height: 4px;
+            background: #fff;
+            box-shadow: 0 0 18px 6px rgba(255,255,255,0.8),
+                        0 0 40px 12px rgba(180,200,255,0.5);
+            transform: scaleX(0);
+            transform-origin: center;
+        }
+
+        /* Fase 1: todo se comprime en una línea horizontal */
+        @keyframes tv-collapse {
+            0%   { clip-path: inset(0% 0%);         opacity: 1; }
+            40%  { clip-path: inset(48% 0%);        opacity: 1; }
+            70%  { clip-path: inset(49.5% 0%);      opacity: 1; }
+            100% { clip-path: inset(50% 0%);        opacity: 0; }
+        }
+        /* Fase 2: la línea blanca aparece y se encoge */
+        @keyframes tv-line-flash {
+            0%   { transform: scaleX(1);   opacity: 1; }
+            60%  { transform: scaleX(0.3); opacity: 0.9; }
+            100% { transform: scaleX(0);   opacity: 0; }
+        }
+
+        #tv-off-screen.active {
+            visibility: visible;
+            animation: tv-collapse 0.55s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+        #tv-off-screen.active::before {
+            animation: tv-line-flash 0.6s ease-out 0.45s forwards;
+        }
+
+        /* Fase 3: negro final — simplemente queda negro */
+        #tv-off-screen.black {
+            opacity: 1;
+            visibility: visible;
+            animation: none;
+        }
+        #tv-off-screen.black::before {
+            transform: scaleX(0);
+            opacity: 0;
+            animation: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container" onclick="nextDialogue()">
+    <div id="start-screen" onclick="startSequence(); event.stopPropagation();">
+        <h2>[ CLIC PARA EMPEZAR ]</h2>
+        <p style="font-size:8px;color:#aaa;">♪ con efectos y música ♪</p>
+    </div>
+
+    <div id="volume-indicator" onclick="toggleMute(); event.stopPropagation();">🔊 SFX</div>
+
+    <div id="juan-wrapper" class="character-wrapper">
+        <img id="juan" class="character" src="movements/standart_juan/1.png">
+    </div>
+    <div id="abi-wrapper" class="character-wrapper">
+        <img id="abi" class="character" src="movements/standart_abi/1.png">
+    </div>
+
+    <div id="dialogue-box">
+        <div id="text-content"></div>
+    </div>
+
+    <div id="japanese-modal" onclick="event.stopPropagation()">
+        <div class="proposal-card">
+            <h1>¿QUIERES SER MI NOVIA?</h1>
+            <div class="japanese-options">
+                <button class="btn-japanese yes" onclick="handleResponse('si')">はい (SÍ)</button>
+                <button id="btn-no-jap" class="btn-japanese no"
+                    onmouseover="moveNoJap()" onclick="moveNoJap()" ontouchstart="moveNoJap()">
+                    いいえ (NO)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla apagado TV: sobre todo lo demás -->
+    <div id="tv-off-screen"></div>
+
+    <div id="love-overlay">
+        <div id="letter-card">
+            <div id="letter-header">
+                <div id="letter-title-row">
+                    <span class="pixel-heart">💖</span>
+                    <h2>CARTA DE AMOR</h2>
+                    <span class="pixel-heart">💖</span>
+                </div>
+                <button id="btn-close-letter" onclick="closeLetter(); event.stopPropagation();">
+                    [ CERRAR ]
+                </button>
+            </div>
+            <div id="letter-body">
+                <div id="love-letter"></div>
+                <div id="letter-deco">❤ ❤ ❤ ❤ ❤</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<audio id="bg-audio" src="assets/cancion.mp3" loop></audio>
+
+<script>
+    let audioCtx  = null;
+    let muted     = false;
+    let isTyping  = false;
+    let currentIdx = 0;
+    let noCount   = 0;
+    const bgAudio = document.getElementById('bg-audio');
+
+    const dialogues = [
+        "Juan: ¡Abi, mi niña linda! Sabía que estarías aquí...",
+        "Abi: Te estaba esperando, no sabes cuanto te extrañé, me crucé a un par de Mexichangos en el camino, los odio a todos.",
+        "Juan: Hay que darles machete amor... pero en fin,te extrañé mucho más, eres el amor de mi vida, ¿vale?.",
+        "Abi: Tú me encantas amor, besemonos, okei? okei.",
+        "Juan: Mi hermosa Abi, ¿Te puedo hacer una pregunta?. No tomará mucho tiempo, lo he estado pensando mucho.",
+        "Abi: Claro, cuentame amor, o si no me odias ¿cierto?. Me odias, ash.",
+        "Juan: Todo lo contrario... Amor, quisiera preguntarte si..."
+    ];
+
+    const loveMessage =
+`Mi pequeña Sara, mi Abi,
+
+Amor, haz convertido estos últimos meses,
+ en los mejores de mi vida,
+se que hay mucha distancia, y sentía miedo de perdirtelo, 
+no me sentía seguro de mi mismo,
+pero, cuando dos almas están destinadas a estar juntas, 
+no hay ninguna fuerza sobrenatural, 
+que pueda cambiar nuestra historia.
+
+Eres lo más bonito que me ha pasado,
+y en cada detalle encuentro razones
+para quererte más.
+
+Te propongo un camino juntos,
+con paciencia, ternura y mucho amor.
+
+Con todo mi corazón,
+Juan ❤`;
+
+    function getAudioCtx() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
+    }
+
+    function playTone({ freq, type = 'triangle', gain = 0.3, duration = 0.15, startTime = 0 }) {
+        if (muted) return;
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime + startTime;
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(gain, now + 0.01);
+        g.gain.linearRampToValueAtTime(0, now + duration);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(now); osc.stop(now + duration + 0.05);
+    }
+
+    function playBloop(isJuan) {
+        if (muted) return;
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        const base = isJuan ? 280 : 420;
+        const pitch = base + (Math.random() * 40 - 20);
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 1.25, now + 0.04);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(now); osc.stop(now + 0.09);
+    }
+
+    function playSwordSlash() {
+        if (muted) return;
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 0.5) * 0.7;
+        }
+        const src    = ctx.createBufferSource();
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(3200, now);
+        filter.frequency.exponentialRampToValueAtTime(700, now + 0.28);
+        filter.Q.value = 0.5;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.8, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        src.buffer = buf;
+        src.connect(filter); filter.connect(g); g.connect(ctx.destination);
+        src.start(now);
+        playTone({ freq: 1100, type: 'sawtooth', gain: 0.12, duration: 0.06 });
+        playTone({ freq: 550,  type: 'sawtooth', gain: 0.08, duration: 0.1, startTime: 0.05 });
+    }
+
+    function playKiai() {
+        if (muted) return;
+        [220, 180, 150].forEach((f, i) => {
+            playTone({ freq: f, type: 'sawtooth', gain: 0.18, duration: 0.14, startTime: i * 0.07 });
+        });
+    }
+
+    function playFanfare() {
+        if (muted) return;
+        const chords = [
+            [523, 659, 784],
+            [587, 698, 880],
+            [659, 784, 988],
+            [698, 880, 1047]
+        ];
+        chords.forEach((ch, i) => {
+            ch.forEach((f, j) => playTone({ freq: f, type: 'triangle', gain: 0.18, duration: 0.35, startTime: i * 0.18 + j * 0.02 }));
+        });
+        [1047, 988, 1047, 1175, 1319].forEach((f, i) => {
+            playTone({ freq: f, type: 'square', gain: 0.22, duration: 0.18, startTime: 0.8 + i * 0.12 });
+        });
+    }
+
+    function playSadJingle() {
+        if (muted) return;
+        [392, 349, 329, 293].forEach((f, i) => {
+            playTone({ freq: f, type: 'triangle', gain: 0.15, duration: 0.2, startTime: i * 0.15 });
+        });
+    }
+
+    function spawnHearts() {
+        const container = document.getElementById('game-container');
+        const symbols = ['❤', '💕', '💗', '💓', '❤'];
+        for (let i = 0; i < 14; i++) {
+            setTimeout(() => {
+                const h = document.createElement('div');
+                h.className = 'heart';
+                h.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+                h.style.left   = Math.random() * 80 + 10 + '%';
+                h.style.bottom = Math.random() * 30 + 10 + '%';
+                h.style.fontSize = (14 + Math.random() * 14) + 'px';
+                container.appendChild(h);
+                setTimeout(() => h.remove(), 3500);
+            }, i * 160);
+        }
+    }
+
+    function spawnSakura() {
+        const container = document.getElementById('game-container');
+        const petals = ['🌸', '🌺', '🌷', '🌸'];
+        for (let i = 0; i < 20; i++) {
+            setTimeout(() => {
+                const p = document.createElement('div');
+                p.className = 'sakura-petal';
+                p.textContent = petals[Math.floor(Math.random() * petals.length)];
+                p.style.left = Math.random() * 90 + '%';
+                p.style.top  = '0px';
+                p.style.animationDuration = (3.5 + Math.random() * 2.5) + 's';
+                container.appendChild(p);
+                setTimeout(() => p.remove(), 8000);
+            }, i * 130);
+        }
+    }
+
+    function spawnBgPixels() {
+        const overlay = document.getElementById('love-overlay');
+        const colors  = ['#e8294a','#ff85a2','#ff4d4d','#ffd0e0','#b32a2a'];
+        for (let i = 0; i < 22; i++) {
+            const px = document.createElement('div');
+            px.className = 'bg-pixel';
+            px.style.left  = Math.random() * 100 + '%';
+            px.style.bottom = Math.random() * 100 + '%';
+            px.style.background = colors[Math.floor(Math.random() * colors.length)];
+            px.style.animationDelay    = (Math.random() * 3)   + 's';
+            px.style.animationDuration = (3 + Math.random() * 3) + 's';
+            px.style.width  = (4 + Math.random() * 8) + 'px';
+            px.style.height = px.style.width;
+            overlay.appendChild(px);
+        }
+    }
+
+    function toggleMute() {
+        muted = !muted;
+        document.getElementById('volume-indicator').textContent = muted ? '🔇 SFX' : '🔊 SFX';
+        bgAudio.muted = muted;
+        if (muted) { bgAudio.pause(); }
+        else { bgAudio.play().catch(() => {}); }
+    }
+
+    function startSequence() {
+        document.getElementById('start-screen').style.display = 'none';
+        getAudioCtx().resume().then(() => {
+            playTone({ freq: 523, duration: 0.5 });
+            bgAudio.volume = 0.5;
+            bgAudio.play().catch(() => {});
+            walkIn();
+        });
+    }
+
+    function walkIn() {
+        const juanWrapper = document.getElementById('juan-wrapper');
+        const abiWrapper  = document.getElementById('abi-wrapper');
+        const juan = document.getElementById('juan');
+        const abi  = document.getElementById('abi');
+        const container   = document.getElementById('game-container');
+
+        let pos   = -200;
+        let frame = 1;
+
+        juanWrapper.style.left  = '-200px';
+        abiWrapper.style.right  = '-200px';
+
+        const moveInterval = setInterval(() => {
+            const stopPoint = (container.offsetWidth / 2) - juanWrapper.offsetWidth - 10;
+            pos += 3;
+            juanWrapper.style.left  = pos + 'px';
+            abiWrapper.style.right  = pos + 'px';
+
+            frame = (frame % 9) + 1;
+            juan.src = `movements/right_movements_juan/${frame}.png`;
+            abi.src  = `movements/left_movements_abi/${frame}.png`;
+
+            if (pos % 20 === 0) {
+                playTone({ freq: 150, type: 'square', gain: 0.05, duration: 0.08 });
+            }
+
+            if (pos >= stopPoint) {
+                clearInterval(moveInterval);
+                juanWrapper.style.left  = stopPoint + 'px';
+                abiWrapper.style.right  = stopPoint + 'px';
+                juan.src = 'movements/standart_juan/1.png';
+                abi.src  = 'movements/standart_abi/1.png';
+                document.getElementById('dialogue-box').style.display = 'block';
+                typeWriter(dialogues[0], false);
+            }
+        }, 50);
+    }
+
+    function nextDialogue() {
+        if (isTyping) return;
+        if (currentIdx < dialogues.length - 1) {
+            currentIdx++;
+            playTone({ freq: 349, type: 'square', gain: 0.08, duration: 0.08 });
+            const isLast = (currentIdx === dialogues.length - 1);
+            typeWriter(dialogues[currentIdx], isLast);
+        }
+    }
+
+    function typeWriter(text, isLastDialogue = false) {
+        isTyping = true;
+        let i = 0;
+        const content = document.getElementById('text-content');
+        content.innerHTML = '';
+        const isJuan = text.startsWith('Juan');
+
+        function type() {
+            if (i < text.length) {
+                const ch = text.charAt(i);
+                content.innerHTML += ch;
+                if (ch.trim() && ch !== ':') playBloop(isJuan);
+                i++;
+                setTimeout(type, 50);
+            } else {
+                isTyping = false;
+                if (isLastDialogue) {
+                    setTimeout(() => triggerSwordProposal(), 900);
+                }
+            }
+        }
+        type();
+    }
+
+    function triggerSwordProposal() {
+        document.getElementById('game-container').style.pointerEvents = 'none';
+
+        const juan = document.getElementById('juan');
+        playKiai();
+
+        let frame = 1;
+        const swordInterval = setInterval(() => {
+            juan.src = `movements/custom_juan/${frame}.png`;
+            frame++;
+            if (frame > 6) {
+                clearInterval(swordInterval);
+                setTimeout(() => {
+                    playSwordSlash();
+                    setTimeout(() => {
+                        juan.src = 'movements/custom_juan/6.png';
+                        showProposalWindow();
+                    }, 120);
+                }, 80);
+            }
+        }, 110);
+    }
+
+    function showProposalWindow() {
+        const modal = document.getElementById('japanese-modal');
+        modal.classList.add('visible');
+        document.getElementById('game-container').style.pointerEvents = 'auto';
+    }
+
+    function handleResponse(choice) {
+        if (choice === 'si') {
+            document.getElementById('japanese-modal').classList.remove('visible');
+            document.getElementById('juan').src = 'movements/standart_juan/1.png';
+            playFanfare();
+            spawnHearts();
+            spawnSakura();
+            startLoveScene();
+        }
+    }
+
+    function startLoveScene() {
+        const overlay = document.getElementById('love-overlay');
+        overlay.classList.add('active');
+        spawnBgPixels();
+
+        setTimeout(() => {
+            const card = document.getElementById('letter-card');
+            document.getElementById('love-letter').textContent = loveMessage;
+            card.classList.add('visible');
+            spawnHeartsOnLetter();
+        }, 500);
+    }
+
+    function spawnHeartsOnLetter() {
+        const overlay = document.getElementById('love-overlay');
+        const symbols = ['❤', '💕', '💗', '💓'];
+        for (let i = 0; i < 10; i++) {
+            setTimeout(() => {
+                const h = document.createElement('div');
+                h.className = 'heart';
+                h.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+                h.style.left   = Math.random() * 80 + 10 + '%';
+                h.style.bottom = Math.random() * 40 + 5  + '%';
+                h.style.fontSize = (12 + Math.random() * 10) + 'px';
+                overlay.appendChild(h);
+                setTimeout(() => h.remove(), 3500);
+            }, i * 200);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       CERRAR CARTA — apagado tipo CRT
+       1. Fade out música en ~800ms
+       2. Animación colapso vertical (clip-path) + línea blanca
+       3. Pantalla queda en negro puro
+    ═══════════════════════════════════════════ */
+    function closeLetter() {
+        const overlay   = document.getElementById('love-overlay');
+        const tvScreen  = document.getElementById('tv-off-screen');
+        const card      = document.getElementById('letter-card');
+
+        // — 1. Fade out de la música —
+        const fadeDuration = 900; // ms
+        const startVol     = bgAudio.volume;
+        const startTime    = Date.now();
+        const fadeInterval = setInterval(() => {
+            const progress = Math.min((Date.now() - startTime) / fadeDuration, 1);
+            bgAudio.volume = startVol * (1 - progress);
+            if (progress >= 1) {
+                clearInterval(fadeInterval);
+                bgAudio.pause();
+                bgAudio.currentTime = 0;
+                bgAudio.volume = 0.5; // reset para posible reuso
+            }
+        }, 30);
+
+        // — 2. Ocultar carta inmediatamente —
+        card.classList.remove('visible');
+        card.style.pointerEvents = 'none';
+
+        // — 3. Limpiar love-overlay —
+        overlay.classList.remove('active');
+        overlay.querySelectorAll('.bg-pixel').forEach(el => el.remove());
+
+        // — 4. Lanzar animación CRT: colapso + línea —
+        // Pequeño delay para que el overlay desaparezca primero
+        setTimeout(() => {
+            tvScreen.classList.remove('black'); // por si acaso
+            tvScreen.classList.add('active');
+
+            // — 5. Cuando termina la animación, dejar pantalla en negro permanente —
+            // La animación dura 0.55s para el colapso + 0.6s delay + línea = ~1.1s total
+            setTimeout(() => {
+                tvScreen.classList.remove('active');
+                tvScreen.classList.add('black');
+            }, 1150);
+
+        }, 80);
+    }
+
+    /* ═══════════════════════════════════════════
+       BOTÓN NO — se escapa dentro del recuadro
+    ═══════════════════════════════════════════ */
+    function moveNoJap() {
+        playSadJingle();
+        noCount++;
+        const btn = document.getElementById('btn-no-jap');
+        const proposalCard = document.querySelector('#japanese-modal .proposal-card');
+
+        if (btn && proposalCard) {
+            btn.style.position = 'absolute';
+            const maxX = proposalCard.offsetWidth  - btn.offsetWidth  - 10;
+            const maxY = proposalCard.offsetHeight - btn.offsetHeight - 10;
+            btn.style.left = Math.max(10, Math.random() * maxX) + 'px';
+            btn.style.top  = Math.max(10, Math.random() * maxY) + 'px';
+        }
+
+        if (noCount >= 3) btn.style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
